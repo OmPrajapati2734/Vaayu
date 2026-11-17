@@ -124,3 +124,24 @@ describe('Diurnal Inversion Forecast Simulation', () => {
   });
 });
 
+describe('Mathematical Engine Boundary & Robustness Tests', () => {
+  it('gracefully handles boundary 0 ug/m3 and extreme > 1000 ug/m3 PM2.5 levels', () => {
+    const zeroAQI = calculateAQIFromPM25(0);
+    expect(zeroAQI.aqi).toBe(0);
+    expect(zeroAQI.category).toBe('Good');
+
+    const extremeAQI = calculateAQIFromPM25(1200);
+    expect(extremeAQI.category).toBe('SeverePlus');
+    expect(extremeAQI.aqi).toBeGreaterThan(500);
+  });
+
+  it('handles zero exposure duration and zero filtration gracefully', () => {
+    const zeroDose = calculateInhaledPM25Micrograms(300, 0, 'adult', 'active', 0);
+    expect(zeroDose).toBe(0);
+
+    const zeroCigarettes = calculateCigaretteEquivalence(0);
+    expect(zeroCigarettes).toBe(0);
+  });
+});
+
+

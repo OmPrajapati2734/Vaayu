@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import {
   AirQualitySnapshot,
@@ -22,7 +22,6 @@ import {
   Thermometer,
   Wind,
   Droplets,
-  AlertTriangle,
   CheckCircle2,
   Sparkles,
   Info,
@@ -37,7 +36,7 @@ interface LocationMapSelectorProps {
 
 export const LocationMapSelector: React.FC<LocationMapSelectorProps> = ({
   currentProfile,
-  currentSnapshot,
+  currentSnapshot: _currentSnapshot,
   onLocationSelected,
   language,
 }) => {

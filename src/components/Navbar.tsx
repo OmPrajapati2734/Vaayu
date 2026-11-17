@@ -42,6 +42,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'dashboard', label: language === 'en' ? 'Live Smog Monitor' : 'लाइव स्मॉग मॉनिटर' },
     { id: 'map', label: language === 'en' ? 'Select Location on Map' : 'मानचित्र से स्थान चुनें' },
     { id: 'iaq-hacks', label: language === 'en' ? 'Indoor Air Hacks & DIY' : 'इंडोर एयर हैक्स' },
+    { id: 'community', label: language === 'en' ? 'Community Hub' : 'सामुदायिक हब' },
     { id: 'routines', label: language === 'en' ? 'Low-Emission Planner' : 'दैनिक रूटीन' },
     { id: 'impact', label: language === 'en' ? 'Direct Impact & Badges' : 'स्वास्थ्य प्रभाव' },
     { id: 'assistant', label: language === 'en' ? 'GenAI Assistant' : 'एआई सहायक' },

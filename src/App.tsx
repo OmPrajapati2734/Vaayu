@@ -5,6 +5,7 @@ import { LocationMapSelector } from '@/components/LocationMapSelector';
 import { IAQHackStudio } from '@/components/IAQHackStudio';
 import { RoutinePlanner } from '@/components/RoutinePlanner';
 import { ImpactTracker } from '@/components/ImpactTracker';
+import { CommunityHub } from '@/components/CommunityHub';
 import { ChatAssistant } from '@/components/ChatAssistant';
 import { FamilyProfileModal } from '@/components/FamilyProfileModal';
 
@@ -123,6 +124,14 @@ export const App: React.FC = () => {
 
   return (
     <div className={`min-h-screen ${highContrast ? 'high-contrast' : ''}`}>
+      {/* Skip to Main Content Link for WCAG 2.1 AA Accessibility */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 z-50 px-4 py-2 bg-sky-600 text-white font-bold rounded-xl shadow-lg focus:outline-none focus:ring-2 focus:ring-white"
+      >
+        {language === 'en' ? 'Skip to main content' : 'मुख्य सामग्री पर जाएं'}
+      </a>
+
       {/* Top Navigation */}
       <Navbar
         currentProfile={profile}
@@ -136,7 +145,7 @@ export const App: React.FC = () => {
       />
 
       {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <main id="main-content" tabIndex={-1} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 focus:outline-none">
         
         {activeTab === 'dashboard' && (
           <div className="space-y-10">
@@ -167,6 +176,10 @@ export const App: React.FC = () => {
 
         {activeTab === 'iaq-hacks' && (
           <IAQHackStudio profile={profile} language={language} />
+        )}
+
+        {activeTab === 'community' && (
+          <CommunityHub profile={profile} snapshot={snapshot} language={language} />
         )}
 
         {activeTab === 'routines' && (

@@ -5,18 +5,13 @@ import {
   ScheduledRoutineItem,
 } from '@/types';
 import {
-  toolGenerateLowEmissionRoutine,
-} from '@/genai/orchestrator';
-import {
   Calendar,
   CheckCircle2,
   Circle,
-  ArrowRight,
   Shield,
   Leaf,
   Users,
   Sparkles,
-  Award,
 } from 'lucide-react';
 
 interface RoutinePlannerProps {
@@ -28,13 +23,13 @@ interface RoutinePlannerProps {
 }
 
 export const RoutinePlanner: React.FC<RoutinePlannerProps> = ({
-  profile,
-  snapshot,
+  profile: _profile,
+  snapshot: _snapshot,
   routines,
   onToggleRoutineStatus,
   language,
 }) => {
-  const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all');
+  const [filter] = useState<'all' | 'pending' | 'completed'>('all');
 
   const filteredRoutines = routines.filter((r) => {
     if (filter === 'completed') return r.status === 'completed';

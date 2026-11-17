@@ -1,4 +1,4 @@
-import { AirQualitySnapshot, AQICategory, InversionSeverity } from '@/types';
+import { AirQualitySnapshot, InversionSeverity } from '@/types';
 import { calculateAQIFromPM25, generateDiurnalHourlyForecast } from '@/core/math-engines';
 
 export interface LocationHotspot {

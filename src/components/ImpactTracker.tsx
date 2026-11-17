@@ -8,11 +8,8 @@ import {
   ShieldCheck,
   Cigarette,
   Leaf,
-  Globe2,
   Users2,
   Share2,
-  Download,
-  Sparkles,
   HeartPulse,
 } from 'lucide-react';
 

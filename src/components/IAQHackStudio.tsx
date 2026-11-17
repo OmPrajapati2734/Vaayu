@@ -4,7 +4,6 @@ import {
 } from '@/core/math-engines';
 import {
   SCIENTIFIC_IAQ_HACKS,
-  SCIENTIFIC_CITATIONS,
 } from '@/genai/knowledge-base';
 import {
   FamilyProfile,
@@ -13,13 +12,8 @@ import {
 import {
   Wrench,
   CheckCircle,
-  HelpCircle,
   Sparkles,
-  Droplets,
-  Flame,
-  Leaf,
   Wind,
-  DollarSign,
   Gauge,
   Timer,
   BookOpen,

@@ -4,6 +4,9 @@ import {
   FamilyProfile,
   GenAIToolExecution,
   IAQRemedy,
+  IAQSimulationResult,
+  RoutineExecutionResult,
+  DirectImpactQuantifiedResult,
   ScheduledRoutineItem,
 } from '@/types';
 import {
@@ -13,9 +16,9 @@ import {
   calculateInhaledPM25Micrograms,
   calculateTransportEmissionsDifferential,
   generateDiurnalHourlyForecast,
-  getAQIColorPalette,
 } from '@/core/math-engines';
 import { calculateLocationEnvironmentalData } from '@/core/geo-environment';
+import { fenceAndGuardPrompt, sanitizeInput } from '@/core/security';
 import { SCIENTIFIC_CITATIONS, SCIENTIFIC_IAQ_HACKS } from '@/genai/knowledge-base';
 
 // ==========================================
@@ -273,7 +276,7 @@ export function toolGenerateLowEmissionRoutine(
  */
 export function toolQuantifyDirectImpact(
   routines: ScheduledRoutineItem[],
-  familyCount: number
+  _familyCount: number
 ) {
   const completedOrAccepted = routines.filter((r) => r.status === 'accepted' || r.status === 'completed');
   const activeItems = completedOrAccepted.length > 0 ? completedOrAccepted : routines; // calculate potential if not yet checked
@@ -373,7 +376,22 @@ export class AeroSenseAIAgent {
     profile: FamilyProfile,
     snapshot: AirQualitySnapshot
   ): Promise<ChatMessage> {
-    const queryLower = userQuery.toLowerCase();
+    const cleanQuery = sanitizeInput(userQuery);
+    const { isInjectionDetected } = fenceAndGuardPrompt(cleanQuery);
+
+    if (isInjectionDetected) {
+      return {
+        id: `chat-${Date.now()}`,
+        role: 'assistant',
+        content:
+          '⚠️ **Security Precaution Active**: The submitted query contained unauthorized instructions or prompt override attempts. AeroSense AI remains strictly scoped to air quality protection, inversion physics, and low-emission family guidance.',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        toolCalls: [],
+        citations: [],
+      };
+    }
+
+    const queryLower = cleanQuery.toLowerCase();
     const executedTools: GenAIToolExecution[] = [];
 
     // Autonomous Tool Calling Decision Graph
@@ -388,21 +406,23 @@ export class AeroSenseAIAgent {
     if (queryLower.includes('hack') || queryLower.includes('filter') || queryLower.includes('corsi') || queryLower.includes('purifier') || queryLower.includes('indoor')) {
       const iaqResult = this.executeTool('simulateIAQHacks', { roomVolumeM3: profile.roomVolumeCubicMeters, currentPm25: snapshot.pm25 });
       executedTools.push(this.toolLogs[this.toolLogs.length - 1]);
-      promptContext += `\n[IAQ TOOL OUTPUT]: Corsi-Rosenthal box CADR is ${(iaqResult as any).corsiSpecs.cadRpm25Cfm} CFM, achieving ${(iaqResult as any).corsiSpecs.effectiveAch} ACH. Clearance time to 90% reduction: ${(iaqResult as any).corsiSpecs.clearanceTimeMinutes} mins.`;
+      const typedIaq = iaqResult as unknown as IAQSimulationResult;
+      promptContext += `\n[IAQ TOOL OUTPUT]: Corsi-Rosenthal box CADR is ${typedIaq.corsiSpecs.cadRpm25Cfm} CFM, achieving ${typedIaq.corsiSpecs.effectiveAch} ACH. Clearance time to 90% reduction: ${typedIaq.corsiSpecs.clearanceTimeMinutes} mins.`;
     }
 
     if (queryLower.includes('routine') || queryLower.includes('commute') || queryLower.includes('travel') || queryLower.includes('schedule') || queryLower.includes('school')) {
       const routineResult = this.executeTool('generateLowEmissionRoutine', { profile, snapshot });
       executedTools.push(this.toolLogs[this.toolLogs.length - 1]);
-      const routines = (routineResult as any).routines as ScheduledRoutineItem[];
-      promptContext += `\n[ROUTINE TOOL OUTPUT]: Generated ${routines.length} low-emission schedule steps targeting commute and school hours.`;
+      const typedRoutines = (routineResult as unknown as RoutineExecutionResult).routines;
+      promptContext += `\n[ROUTINE TOOL OUTPUT]: Generated ${typedRoutines.length} low-emission schedule steps targeting commute and school hours.`;
     }
 
     if (queryLower.includes('impact') || queryLower.includes('cigarette') || queryLower.includes('co2') || queryLower.includes('saved') || queryLower.includes('health')) {
       const routines = toolGenerateLowEmissionRoutine(profile, snapshot);
       const impactResult = this.executeTool('quantifyDirectImpact', { routines, familyCount: profile.members.length });
       executedTools.push(this.toolLogs[this.toolLogs.length - 1]);
-      promptContext += `\n[IMPACT TOOL OUTPUT]: Avoided ${(impactResult as any).dailyPm25AvoidedMicrograms} ug PM2.5 (equivalent to not smoking ${(impactResult as any).equivalentCigarettesNotSmoked} cigarettes). Saved ${(impactResult as any).dailyCo2EmissionsSavedKg} kg CO2 today.`;
+      const typedImpact = impactResult as unknown as DirectImpactQuantifiedResult;
+      promptContext += `\n[IMPACT TOOL OUTPUT]: Avoided ${typedImpact.dailyPm25AvoidedMicrograms} ug PM2.5 (equivalent to not smoking ${typedImpact.equivalentCigarettesNotSmoked} cigarettes). Saved ${typedImpact.dailyCo2EmissionsSavedKg} kg CO2 today.`;
     }
 
     // Synthesize structured GenAI response grounded in domain science

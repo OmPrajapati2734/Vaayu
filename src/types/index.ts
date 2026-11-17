@@ -215,3 +215,61 @@ export interface ChatMessage {
     keyTakeaway: string;
   }[];
 }
+
+// ==========================================
+// 7. COMMUNITY & SUSTAINABLE ALTERNATIVES
+// ==========================================
+
+export interface CleanAirCorridor {
+  id: string;
+  name: string;
+  routeType: 'walking_school_street' | 'green_cycling_path' | 'ev_transit_lane' | 'residential_barrier';
+  exposureReductionPercent: number;
+  lengthKm: number;
+  description: string;
+  recommendedTimeWindow: string;
+  treeCanopyCoverPercent: number;
+}
+
+export interface CarpoolCluster {
+  id: string;
+  clusterName: string;
+  destination: string;
+  participatingFamiliesCount: number;
+  totalAvoidedCo2DailyKg: number;
+  totalAvoidedNoxDailyGrams: number;
+  departureTime: string;
+  vehicleType: 'electric_van' | 'cng_shuttle' | 'hybrid_carpool';
+}
+
+export interface SmokeIncidentReport {
+  id: string;
+  timestamp: string;
+  location: string;
+  sourceType: 'waste_burning' | 'leaf_burning' | 'unregulated_diesel_generator' | 'biomass_cooking';
+  estimatedPm25Spike: number;
+  aiVerificationConfidence: number;
+  status: 'reported' | 'verified_by_ward' | 'resolved';
+  recommendedActions: string[];
+}
+
+export interface IAQSimulationResult {
+  corsiSpecs: CorsiRosenthalSpecs;
+  recommendedHacks: IAQRemedy[];
+  projectedIndoorPm25: number;
+  indoorClearingTimeMinutes: number;
+}
+
+export interface RoutineExecutionResult {
+  routines: ScheduledRoutineItem[];
+}
+
+export interface DirectImpactQuantifiedResult {
+  dailyPm25AvoidedMicrograms: number;
+  equivalentCigarettesNotSmoked: number;
+  dailyCo2EmissionsSavedKg: number;
+  dailyNoxSavedGrams: number;
+  indoorAchAchieved: number;
+  communityNeighborhoodSavingsKgCo2: number;
+  cleanAirRankBadge: 'Clean Air Novice' | 'Urban Smog Guardian' | 'Community Eco Champion' | 'Atmospheric Vanguard';
+}

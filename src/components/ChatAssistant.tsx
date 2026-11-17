@@ -7,16 +7,13 @@ import {
   ChatMessage,
   FamilyProfile,
 } from '@/types';
+import { sanitizeInput } from '@/core/security';
 import {
   Send,
-  Sparkles,
   Bot,
   User,
   Wrench,
   BookOpen,
-  HelpCircle,
-  Clock,
-  Shield,
 } from 'lucide-react';
 
 interface ChatAssistantProps {
@@ -54,8 +51,9 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({ profile, snapshot,
   ];
 
   const handleSendMessage = async (queryText?: string) => {
-    const textToSend = queryText || inputValue;
-    if (!textToSend.trim() || isProcessing) return;
+    const rawText = queryText || inputValue;
+    const textToSend = sanitizeInput(rawText.trim(), 500);
+    if (!textToSend || isProcessing) return;
 
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
@@ -78,7 +76,9 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({ profile, snapshot,
         {
           id: `error-${Date.now()}`,
           role: 'assistant',
-          content: 'Sorry, I encountered a temporary tool execution delay. Please try again.',
+          content: language === 'hi'
+            ? 'क्षमा करें, AI सहायक से संपर्क करने में समस्या हुई। कृपया पुनः प्रयास करें।'
+            : 'Sorry, I encountered a temporary tool execution delay. Please try again.',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         },
       ]);

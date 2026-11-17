@@ -25,9 +25,8 @@ interface AQIGaugeProps {
   onOpenMap?: () => void;
 }
 
-export const AQIGauge: React.FC<AQIGaugeProps> = ({ snapshot, profile, language, onOpenMap }) => {
+export const AQIGauge: React.FC<AQIGaugeProps> = ({ snapshot, profile: _profile, language, onOpenMap }) => {
   const [selectedHour, setSelectedHour] = useState<string | null>(null);
-  const palette = getAQIColorPalette(snapshot.aqi);
 
   // Active display metric (either live or selected from hourly scrubber)
   const activeForecast = selectedHour
@@ -162,7 +161,6 @@ export const AQIGauge: React.FC<AQIGaugeProps> = ({ snapshot, profile, language,
             {/* Interactive Hourly Timeline Scrubber */}
             <div className="grid grid-cols-6 sm:grid-cols-9 gap-2">
               {snapshot.hourlyForecast.map((item) => {
-                const itemPalette = getAQIColorPalette(item.aqi);
                 const isSelected = selectedHour === item.hour;
                 return (
                   <button
