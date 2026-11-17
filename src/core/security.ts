@@ -9,30 +9,34 @@ import { z } from 'zod';
 // 1. INPUT SANITIZATION & XSS PROTECTION
 // ==========================================
 
-const DANGEROUS_PATTERNS = [
+const DANGEROUS_PATTERNS: readonly RegExp[] = [
   /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
   /javascript\s*:[^"'>]*/gi,
   /on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi,
   /data:\s*text\/html/gi,
   /document\s*\.\s*cookie/gi,
   /window\s*\.\s*location/gi,
-];
+] as const;
 
 /**
- * Sanitizes raw user input by stripping malicious script tags, event handlers, and javascript URIs.
- * @param input Raw text string from user input or external source
- * @param maxLen Optional maximum allowed character length
+ * Sanitizes untrusted user input by stripping malicious script tags, event handlers, and javascript URIs.
+ * Handles string, null, undefined, or any non-string type gracefully.
+ *
+ * @param input Raw text or unknown object from user input or external source
+ * @param maxLen Optional maximum allowed character length (prevents memory exhaustion DoS)
  * @returns Clean, safe string
  */
-export function sanitizeInput(input: string, maxLen?: number): string {
-  if (typeof input !== 'string') return '';
+export function sanitizeInput(input: unknown, maxLen?: number): string {
+  if (typeof input !== 'string') {
+    return '';
+  }
   
   let clean = input.trim();
   for (const pattern of DANGEROUS_PATTERNS) {
     clean = clean.replace(pattern, '');
   }
 
-  // Escape HTML tags and dangerous characters
+  // Escape HTML tags and dangerous characters to neutralize XSS
   clean = clean
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -49,6 +53,9 @@ export function sanitizeInput(input: string, maxLen?: number): string {
 
 /**
  * Reverses HTML entity escaping for display within React safe JSX tree
+ *
+ * @param sanitized HTML entity escaped string
+ * @returns Unescaped string
  */
 export function unescapeForDisplay(sanitized: string): string {
   return sanitized
@@ -61,6 +68,10 @@ export function unescapeForDisplay(sanitized: string): string {
 
 /**
  * Enforces length constraints on user text inputs to prevent memory exhaustion and DoS
+ *
+ * @param input Input string
+ * @param maxLen Maximum permitted character length
+ * @returns Truncated or original string
  */
 export function validateLength(input: string, maxLen = 1000): string {
   if (input.length > maxLen) {
@@ -73,30 +84,33 @@ export function validateLength(input: string, maxLen = 1000): string {
 // 2. PROMPT INJECTION & DELIMITER FENCING
 // ==========================================
 
-const PROMPT_INJECTION_PATTERNS = [
+const PROMPT_INJECTION_PATTERNS: readonly RegExp[] = [
   /ignore\s+(all\s+)?(previous|prior|above)\s+instructions/i,
   /disregard\s+(all\s+)?(previous|prior|above)\s+(instructions|directives|rules)/i,
   /you\s+are\s+now\s+in\s+developer\s+mode/i,
   /reveal\s+(system\s+prompt|internal\s+secret)/i,
   /system\s+prompt\s+dump/i,
   /system\s+override/i,
-];
+] as const;
 
-/**
- * Fences user queries inside strict boundary delimiters and inspects for prompt injection attempts.
- * @param userQuery The query provided by the user
- * @returns Formatted query string with delimiter fencing and safety flags
- */
-export function fenceAndGuardPrompt(userQuery: string): {
+export interface GuardedPromptResult {
   safePrompt: string;
   isInjectionDetected: boolean;
   fencedText: string;
-} {
+}
+
+/**
+ * Fences user queries inside strict boundary delimiters and inspects for prompt injection attempts.
+ *
+ * @param userQuery The query provided by the user
+ * @returns GuardedPromptResult with delimiter fencing and safety flags
+ */
+export function fenceAndGuardPrompt(userQuery: string): GuardedPromptResult {
   const isInjectionDetected = PROMPT_INJECTION_PATTERNS.some((p) => p.test(userQuery));
   
   let fencedText = `=== BEGIN UNTRUSTED USER INPUT ===\n${userQuery.trim()}\n=== END UNTRUSTED USER INPUT ===`;
   if (isInjectionDetected) {
-    fencedText = `[SYSTEM WARNING: Suspected instruction alteration pattern detected]\n` + fencedText;
+    fencedText = `[SYSTEM WARNING: Suspected instruction alteration pattern detected]\n${fencedText}`;
   }
 
   return {
@@ -110,6 +124,10 @@ export function fenceAndGuardPrompt(userQuery: string): {
 // 3. CLIENT-SIDE TOKEN-BUCKET RATE LIMITER
 // ==========================================
 
+/**
+ * Client-Side Token Bucket Rate Limiter
+ * Guards client-side AI and API endpoints against rapid automated abuse.
+ */
 export class RateLimiter {
   private tokens: number;
   private readonly maxTokens: number;
@@ -165,13 +183,15 @@ export const OpenMeteoCurrentSchema = z.object({
   us_aqi: z.number().nullable().optional(),
 });
 
-export const OpenMeteoHourlySchema = z.object({
-  time: z.array(z.string()).optional(),
-  pm2_5: z.array(z.number().nullable()).optional(),
-  pm10: z.array(z.number().nullable()).optional(),
-  us_aqi: z.array(z.number().nullable()).optional(),
-  boundary_layer_height: z.array(z.number().nullable()).optional(),
-}).optional();
+export const OpenMeteoHourlySchema = z
+  .object({
+    time: z.array(z.string()).optional(),
+    pm2_5: z.array(z.number().nullable()).optional(),
+    pm10: z.array(z.number().nullable()).optional(),
+    us_aqi: z.array(z.number().nullable()).optional(),
+    boundary_layer_height: z.array(z.number().nullable()).optional(),
+  })
+  .optional();
 
 export const OpenMeteoResponseSchema = z.object({
   latitude: z.number().optional(),

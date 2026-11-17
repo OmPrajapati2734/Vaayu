@@ -4,9 +4,6 @@ import {
   FamilyProfile,
   GenAIToolExecution,
   IAQRemedy,
-  IAQSimulationResult,
-  RoutineExecutionResult,
-  DirectImpactQuantifiedResult,
   ScheduledRoutineItem,
 } from '@/types';
 import {
@@ -191,7 +188,7 @@ export function toolGenerateLowEmissionRoutine(
     const emissionDelta = calculateTransportEmissionsDifferential(
       travelDistKm,
       'ice_car',
-      isHighSmog ? 'metro_transit' : 'metro_transit'
+      isHighSmog ? 'metro_transit' : 'electric_vehicle'
     );
 
     // Calculate Inhaled PM2.5 savings (driving with car AC recirculation vs walking on open road)
@@ -395,34 +392,25 @@ export class AeroSenseAIAgent {
     const executedTools: GenAIToolExecution[] = [];
 
     // Autonomous Tool Calling Decision Graph
-    let promptContext = '';
-
     if (queryLower.includes('inversion') || queryLower.includes('weather') || queryLower.includes('smog') || queryLower.includes('aqi')) {
-      const forecastResult = this.executeTool('getAtmosphericForecast', { location: profile.locationName, basePm25: snapshot.pm25 });
+      this.executeTool('getAtmosphericForecast', { location: profile.locationName, basePm25: snapshot.pm25 });
       executedTools.push(this.toolLogs[this.toolLogs.length - 1]);
-      promptContext += `\n[ATMOSPHERIC TOOL OUTPUT]: AQI is ${(forecastResult as unknown as AirQualitySnapshot).aqi}, PM2.5 is ${(forecastResult as unknown as AirQualitySnapshot).pm25} ug/m3. Inversion Severity: ${(forecastResult as unknown as AirQualitySnapshot).inversionStatus.severity}.`;
     }
 
     if (queryLower.includes('hack') || queryLower.includes('filter') || queryLower.includes('corsi') || queryLower.includes('purifier') || queryLower.includes('indoor')) {
-      const iaqResult = this.executeTool('simulateIAQHacks', { roomVolumeM3: profile.roomVolumeCubicMeters, currentPm25: snapshot.pm25 });
+      this.executeTool('simulateIAQHacks', { roomVolumeM3: profile.roomVolumeCubicMeters, currentPm25: snapshot.pm25 });
       executedTools.push(this.toolLogs[this.toolLogs.length - 1]);
-      const typedIaq = iaqResult as unknown as IAQSimulationResult;
-      promptContext += `\n[IAQ TOOL OUTPUT]: Corsi-Rosenthal box CADR is ${typedIaq.corsiSpecs.cadRpm25Cfm} CFM, achieving ${typedIaq.corsiSpecs.effectiveAch} ACH. Clearance time to 90% reduction: ${typedIaq.corsiSpecs.clearanceTimeMinutes} mins.`;
     }
 
     if (queryLower.includes('routine') || queryLower.includes('commute') || queryLower.includes('travel') || queryLower.includes('schedule') || queryLower.includes('school')) {
-      const routineResult = this.executeTool('generateLowEmissionRoutine', { profile, snapshot });
+      this.executeTool('generateLowEmissionRoutine', { profile, snapshot });
       executedTools.push(this.toolLogs[this.toolLogs.length - 1]);
-      const typedRoutines = (routineResult as unknown as RoutineExecutionResult).routines;
-      promptContext += `\n[ROUTINE TOOL OUTPUT]: Generated ${typedRoutines.length} low-emission schedule steps targeting commute and school hours.`;
     }
 
     if (queryLower.includes('impact') || queryLower.includes('cigarette') || queryLower.includes('co2') || queryLower.includes('saved') || queryLower.includes('health')) {
       const routines = toolGenerateLowEmissionRoutine(profile, snapshot);
-      const impactResult = this.executeTool('quantifyDirectImpact', { routines, familyCount: profile.members.length });
+      this.executeTool('quantifyDirectImpact', { routines, familyCount: profile.members.length });
       executedTools.push(this.toolLogs[this.toolLogs.length - 1]);
-      const typedImpact = impactResult as unknown as DirectImpactQuantifiedResult;
-      promptContext += `\n[IMPACT TOOL OUTPUT]: Avoided ${typedImpact.dailyPm25AvoidedMicrograms} ug PM2.5 (equivalent to not smoking ${typedImpact.equivalentCigarettesNotSmoked} cigarettes). Saved ${typedImpact.dailyCo2EmissionsSavedKg} kg CO2 today.`;
     }
 
     // Synthesize structured GenAI response grounded in domain science

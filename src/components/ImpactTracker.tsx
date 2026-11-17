@@ -26,7 +26,9 @@ export const ImpactTracker: React.FC<ImpactTrackerProps> = ({ impact, profile, l
         title: 'My Clean Air & Low Emission Impact | AeroSense AI',
         text: `Today our family avoided inhaling ${impact.dailyPm25AvoidedMicrograms} µg of PM2.5 (equivalent to ${impact.equivalentCigarettesNotSmoked} cigarettes not smoked) and eliminated ${impact.dailyCo2EmissionsSavedKg} kg of CO2 emissions with AeroSense AI!`,
         url: window.location.href,
-      }).catch(() => {});
+      }).catch((_error: unknown) => {
+        // User dismissed native share sheet
+      });
     } else {
       navigator.clipboard.writeText(
         `Today our family avoided inhaling ${impact.dailyPm25AvoidedMicrograms} µg of PM2.5 (equivalent to ${impact.equivalentCigarettesNotSmoked} cigarettes not smoked) and eliminated ${impact.dailyCo2EmissionsSavedKg} kg of CO2 with AeroSense AI!`

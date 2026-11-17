@@ -72,7 +72,7 @@ export const LocationMapSelector: React.FC<LocationMapSelectorProps> = ({
           setIsFetchingLive(false);
         }
       })
-      .catch(() => {
+      .catch((_error: unknown) => {
         if (isMounted) setIsFetchingLive(false);
       });
 

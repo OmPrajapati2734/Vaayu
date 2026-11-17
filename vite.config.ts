@@ -14,5 +14,19 @@ export default defineConfig({
     port: 3000,
     host: true,
   },
+  build: {
+    target: 'es2022',
+    cssMinify: true,
+    chunkSizeWarningLimit: 800,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-leaflet': ['leaflet'],
+          'vendor-icons': ['lucide-react'],
+          'vendor-validation': ['zod'],
+        },
+      },
+    },
+  },
 });
-

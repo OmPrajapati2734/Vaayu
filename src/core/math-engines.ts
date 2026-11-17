@@ -4,30 +4,58 @@ import {
   FamilyMember,
   HourlyAQIForecast,
 } from '@/types';
+import {
+  PM25_BREAKPOINTS,
+  MINUTE_VENTILATION_BASELINES,
+  ACTIVITY_VENTILATION_MULTIPLIERS,
+  BERKELEY_EARTH_MICROGRAMS_PER_CIGARETTE,
+  CORSI_ROSENTHAL_CONFIG,
+  TRANSPORT_CO2_GRAMS_PER_KM,
+  TRANSPORT_NOX_MG_PER_KM,
+} from '@/core/constants';
 
 /**
- * US-EPA Standard AQI Breakpoints for PM2.5 (24-hour average in ug/m3)
- * Reference: EPA-454/B-18-007
+ * Result structure for US-EPA AQI calculations.
  */
-const PM25_BREAKPOINTS = [
-  { cLow: 0.0, cHigh: 12.0, iLow: 0, iHigh: 50, category: 'Good' as AQICategory },
-  { cLow: 12.1, cHigh: 35.4, iLow: 51, iHigh: 100, category: 'Moderate' as AQICategory },
-  { cLow: 35.5, cHigh: 55.4, iLow: 101, iHigh: 150, category: 'UnhealthyForSensitive' as AQICategory },
-  { cLow: 55.5, cHigh: 150.4, iLow: 151, iHigh: 200, category: 'Unhealthy' as AQICategory },
-  { cLow: 150.5, cHigh: 250.4, iLow: 201, iHigh: 300, category: 'VeryUnhealthy' as AQICategory },
-  { cLow: 250.5, cHigh: 500.4, iLow: 301, iHigh: 500, category: 'Hazardous' as AQICategory },
-];
+export interface AQICalculationResult {
+  aqi: number;
+  category: AQICategory;
+}
 
 /**
- * Calculates US-EPA AQI from PM2.5 concentration (ug/m3)
- * using standard piecewise linear interpolation:
+ * Accessible color palette structure complying with WCAG 2.1 AA.
+ */
+export interface AQIColorPalette {
+  bg: string;
+  border: string;
+  text: string;
+  badge: string;
+  label: string;
+  description: string;
+}
+
+/**
+ * Emission reduction differential result.
+ */
+export interface TransportDifferentialResult {
+  avoidedCo2Kg: number;
+  avoidedNoxGrams: number;
+}
+
+/**
+ * Calculates US-EPA AQI from PM2.5 concentration (ug/m3) using standard piecewise linear interpolation:
  * I = ((I_high - I_low) / (C_high - C_low)) * (C - C_low) + I_low
+ *
+ * @param pm25 PM2.5 particle concentration in ug/m3
+ * @returns Object with numeric AQI (0-999) and mapped AQICategory band
  */
-export function calculateAQIFromPM25(pm25: number): { aqi: number; category: AQICategory } {
-  if (pm25 < 0) return { aqi: 0, category: 'Good' };
-  
+export function calculateAQIFromPM25(pm25: number): AQICalculationResult {
+  if (pm25 <= 0) {
+    return { aqi: 0, category: 'Good' };
+  }
+
   if (pm25 > 500.4) {
-    // Severe Plus / Hazardous emergency extension
+    // Severe Plus / Hazardous emergency extension for winter smog
     const baseAqi = 500;
     const excess = pm25 - 500.4;
     return {
@@ -52,15 +80,11 @@ export function calculateAQIFromPM25(pm25: number): { aqi: number; category: AQI
 /**
  * Returns colorblind-friendly colors and accessible text descriptions for each AQI band.
  * Follows WCAG 2.1 AA contrast requirements.
+ *
+ * @param aqi Calculated numerical AQI
+ * @returns AQIColorPalette containing CSS classes and descriptive text
  */
-export function getAQIColorPalette(aqi: number): {
-  bg: string;
-  border: string;
-  text: string;
-  badge: string;
-  label: string;
-  description: string;
-} {
+export function getAQIColorPalette(aqi: number): AQIColorPalette {
   if (aqi <= 50) {
     return {
       bg: 'bg-emerald-500/10 dark:bg-emerald-500/20',
@@ -70,7 +94,8 @@ export function getAQIColorPalette(aqi: number): {
       label: 'Good (Air Quality is Satisfactory)',
       description: 'Air pollution poses little or no risk to any demographic.',
     };
-  } else if (aqi <= 100) {
+  }
+  if (aqi <= 100) {
     return {
       bg: 'bg-amber-500/10 dark:bg-amber-500/20',
       border: 'border-amber-500',
@@ -79,7 +104,8 @@ export function getAQIColorPalette(aqi: number): {
       label: 'Moderate (Acceptable)',
       description: 'Unusually sensitive individuals may experience minor respiratory irritation.',
     };
-  } else if (aqi <= 150) {
+  }
+  if (aqi <= 150) {
     return {
       bg: 'bg-orange-500/10 dark:bg-orange-500/20',
       border: 'border-orange-500',
@@ -88,7 +114,8 @@ export function getAQIColorPalette(aqi: number): {
       label: 'Unhealthy for Sensitive Groups',
       description: 'Children, seniors, and individuals with asthma/COPD are at heightened risk.',
     };
-  } else if (aqi <= 200) {
+  }
+  if (aqi <= 200) {
     return {
       bg: 'bg-rose-500/10 dark:bg-rose-500/20',
       border: 'border-rose-500',
@@ -97,7 +124,8 @@ export function getAQIColorPalette(aqi: number): {
       label: 'Unhealthy (General Population Warning)',
       description: 'Everyone may begin to experience respiratory distress and cardiac strain.',
     };
-  } else if (aqi <= 300) {
+  }
+  if (aqi <= 300) {
     return {
       bg: 'bg-purple-500/10 dark:bg-purple-500/20',
       border: 'border-purple-500',
@@ -106,58 +134,58 @@ export function getAQIColorPalette(aqi: number): {
       label: 'Very Unhealthy (Health Alert)',
       description: 'Serious risk for the entire community. Avoid all strenuous outdoor exertion.',
     };
-  } else {
-    return {
-      bg: 'bg-red-950/20 dark:bg-red-950/40',
-      border: 'border-red-800',
-      text: 'text-red-900 dark:text-red-300',
-      badge: 'bg-red-900 text-white font-bold',
-      label: 'Hazardous / Winter Smog Emergency',
-      description: 'Catastrophic inversion smog event. Mandatory sealed indoor shelter with filtration.',
-    };
   }
+
+  return {
+    bg: 'bg-red-950/20 dark:bg-red-950/40',
+    border: 'border-red-800',
+    text: 'text-red-900 dark:text-red-300',
+    badge: 'bg-red-900 text-white font-bold',
+    label: 'Hazardous / Winter Smog Emergency',
+    description: 'Catastrophic inversion smog event. Mandatory sealed indoor shelter with filtration.',
+  };
 }
 
 /**
  * Scientific Inhalation Rate Estimator
  * Measures minute ventilation (L/min) based on demographic and physical activity.
  * Based on EPA Exposure Factors Handbook (Chapter 6).
+ *
+ * @param category Demographic group
+ * @param activityLevel Physical exertion level
+ * @returns Minute ventilation in Liters per minute
  */
 export function getMinuteVentilationLiters(
   category: FamilyMember['category'],
   activityLevel: FamilyMember['activityLevel']
 ): number {
-  // Baseline sedentary breathing rates (Liters per minute)
-  const baselineByAge: Record<FamilyMember['category'], number> = {
-    infant: 3.5,     // normalized to body mass
-    child: 8.0,
-    teen: 12.0,
-    adult: 13.5,
-    elderly: 10.5,
-    pregnant: 16.0,  // Progesterone-mediated 30-50% hyperventilation
-  };
-
-  const activityMultiplier: Record<FamilyMember['activityLevel'], number> = {
-    sedentary: 1.0,
-    moderate: 2.1,   // walking, light household chores
-    active: 3.8,     // jogging, fast cycling
-    outdoor_pro: 4.5,// heavy continuous manual labor
-  };
-
-  return baselineByAge[category] * activityMultiplier[activityLevel];
+  const baseline = MINUTE_VENTILATION_BASELINES[category] ?? 13.5;
+  const multiplier = ACTIVITY_VENTILATION_MULTIPLIERS[activityLevel] ?? 1.0;
+  return baseline * multiplier;
 }
 
 /**
  * Calculates PM2.5 Inhaled Mass (micrograms)
  * Formula: Inhaled Mass (ug) = Concentration (ug/m3) * Breathing Volume (m3/hr) * Time (hr) * (1 - Mask Efficiency)
+ *
+ * @param pm25ConcentrationUgM3 Ambient PM2.5 in ug/m3
+ * @param durationHours Exposure duration in hours
+ * @param category Vulnerability demographic
+ * @param activityLevel Physical exertion level
+ * @param respiratorEfficiency Filtration efficiency (0.0 to 1.0)
+ * @returns Inhaled particulate mass in micrograms
  */
 export function calculateInhaledPM25Micrograms(
   pm25ConcentrationUgM3: number,
   durationHours: number,
   category: FamilyMember['category'],
   activityLevel: FamilyMember['activityLevel'],
-  respiratorEfficiency: number = 0 // 0 = none, 0.95 = N95, 0.40 = surgical
+  respiratorEfficiency: number = 0
 ): number {
+  if (durationHours <= 0 || pm25ConcentrationUgM3 <= 0) {
+    return 0;
+  }
+
   const ventilationLitersPerMinute = getMinuteVentilationLiters(category, activityLevel);
   const ventilationCubicMetersPerHour = (ventilationLitersPerMinute * 60) / 1000;
   
@@ -165,7 +193,7 @@ export function calculateInhaledPM25Micrograms(
     pm25ConcentrationUgM3 *
     ventilationCubicMetersPerHour *
     durationHours *
-    (1 - respiratorEfficiency);
+    Math.max(0, 1 - respiratorEfficiency);
 
   return Math.round(effectiveInhaledMass * 10) / 10;
 }
@@ -173,46 +201,58 @@ export function calculateInhaledPM25Micrograms(
 /**
  * Cigarette Equivalence Model
  * Dr. Richard Muller & Elizabeth Muller (Berkeley Earth formula):
- * Breathing 22 ug/m3 of PM2.5 over 24 hours is approximately equivalent to smoking 1 cigarette.
- * 22 ug/m3 * (approx 15 m3 average adult air volume) = ~330 ug of inhaled PM2.5.
+ * Inhaling 22 ug/m3 of PM2.5 over 24 hours (~15 m3 average adult air volume) corresponds to 1 cigarette (~330 ug).
+ *
+ * @param pm25MicrogramsInhaled Inhaled PM2.5 mass in micrograms
+ * @returns Equivalent passive cigarettes consumed
  */
 export function calculateCigaretteEquivalence(pm25MicrogramsInhaled: number): number {
-  const microgramsPerCigarette = 330; // standard Berkeley Earth adult dosage reference
-  const equivalent = pm25MicrogramsInhaled / microgramsPerCigarette;
+  if (pm25MicrogramsInhaled <= 0) {
+    return 0;
+  }
+  const equivalent = pm25MicrogramsInhaled / BERKELEY_EARTH_MICROGRAMS_PER_CIGARETTE;
   return Math.round(equivalent * 10) / 10;
 }
 
 /**
  * Corsi-Rosenthal Box Air Physics Engine
  * Calculates Clean Air Delivery Rate (CADR) and Air Changes per Hour (ACH).
- * Reference: Dr. Richard Corsi & Jim Rosenthal (2020), UC Davis aerosol clearance study.
+ *
+ * @param roomVolumeM3 Room volume in cubic meters
+ * @param fanCfm Rated fan airflow in CFM
+ * @param filterCount Number of MERV filters assembled
+ * @param mervRating Filter MERV rating (typically 13)
+ * @returns CorsiRosenthalSpecs performance metrics
  */
 export function calculateCorsiRosenthalPerformance(
   roomVolumeM3: number,
-  fanCfm: number = 200, // typical 20" standard box fan
-  filterCount: number = 4, // 4-filter cube or 5-filter shroud
-  mervRating: number = 13 // MERV 13 is optimum
+  fanCfm: number = CORSI_ROSENTHAL_CONFIG.DEFAULT_FAN_CFM,
+  filterCount: number = 4,
+  mervRating: number = 13
 ): CorsiRosenthalSpecs {
-  // MERV 13 single-pass fractional removal efficiency for PM2.5 is ~0.85 to 0.90
-  const singlePassEfficiency = mervRating >= 13 ? 0.88 : 0.65;
-  
-  // Static pressure drop penalty reduction: more filter surface area lowers face velocity
-  // and increases airflow compared to a single taped filter.
-  // Flow coefficient factor for 4-5 filters is ~0.75-0.82 of nominal fan CFM
-  const airflowRetentionFactor = filterCount >= 4 ? 0.82 : 0.60;
+  const singlePassEfficiency =
+    mervRating >= 13
+      ? CORSI_ROSENTHAL_CONFIG.MERV13_SINGLE_PASS_EFFICIENCY
+      : CORSI_ROSENTHAL_CONFIG.LOWER_MERV_SINGLE_PASS_EFFICIENCY;
+
+  const airflowRetentionFactor =
+    filterCount >= 4
+      ? CORSI_ROSENTHAL_CONFIG.FOUR_FILTER_FLOW_FACTOR
+      : CORSI_ROSENTHAL_CONFIG.LOW_SURFACE_FLOW_FACTOR;
+
   const effectiveAirflowCfm = fanCfm * airflowRetentionFactor;
-  
   const cadRpm25Cfm = Math.round(effectiveAirflowCfm * singlePassEfficiency);
+  const roomVolumeFt3 = roomVolumeM3 * CORSI_ROSENTHAL_CONFIG.M3_TO_FT3_MULTIPLIER;
   
-  // Convert Room Volume from m3 to ft3 (1 m3 = 35.3147 ft3)
-  const roomVolumeFt3 = roomVolumeM3 * 35.3147;
-  
-  // ACH = (CADR in CFM * 60 minutes) / Room Volume in ft3
-  const effectiveAch = Math.round(((cadRpm25Cfm * 60) / roomVolumeFt3) * 10) / 10;
-  
-  // Time to 90% particle reduction (exponential decay model: ln(10) / ACH * 60 min)
-  // t_90% = 2.303 / ACH * 60
-  const clearanceTimeMinutes = effectiveAch > 0 ? Math.round((2.303 / effectiveAch) * 60) : 120;
+  const effectiveAch =
+    roomVolumeFt3 > 0
+      ? Math.round(((cadRpm25Cfm * 60) / roomVolumeFt3) * 10) / 10
+      : 0;
+
+  const clearanceTimeMinutes =
+    effectiveAch > 0
+      ? Math.round((CORSI_ROSENTHAL_CONFIG.DECAY_CONSTANT_90_PERCENT / effectiveAch) * 60)
+      : 120;
 
   return {
     fanCfm,
@@ -227,40 +267,24 @@ export function calculateCorsiRosenthalPerformance(
 
 /**
  * Transport Emission Differential Engine
- * Computes avoided CO2 (kg) and NOx (grams) per kilometer
- * References: UK DEFRA Greenhouse Gas Conversion Factors & US-EPA MOVES model.
+ * Computes avoided CO2 (kg) and NOx (grams) per trip
+ *
+ * @param distanceKm Trip distance in kilometers
+ * @param baselineMode High-emission baseline mode
+ * @param chosenMode Sustainable alternative mode
+ * @returns Net avoided CO2 (kg) and NOx (grams)
  */
 export function calculateTransportEmissionsDifferential(
   distanceKm: number,
   baselineMode: 'ice_car' | 'bus',
   chosenMode: 'metro_transit' | 'electric_vehicle' | 'cycling_walking' | 'remote_work'
-): { avoidedCo2Kg: number; avoidedNoxGrams: number } {
-  // Emission Factors (g CO2e per passenger-km)
-  const co2FactorsGramsPerKm: Record<string, number> = {
-    ice_car: 192.0,      // Average petrol/diesel passenger vehicle
-    bus: 105.0,          // Urban diesel bus (shared occupancy)
-    metro_transit: 28.0, // High-capacity electrified mass rail
-    electric_vehicle: 45.0, // Grid average charging footprint
-    cycling_walking: 0.0,
-    remote_work: 0.0,
-  };
-
-  // NOx Emission Factors (mg per passenger-km)
-  const noxFactorsMgPerKm: Record<string, number> = {
-    ice_car: 450.0,
-    bus: 850.0,
-    metro_transit: 15.0,
-    electric_vehicle: 5.0,
-    cycling_walking: 0.0,
-    remote_work: 0.0,
-  };
-
-  const baselineCo2 = co2FactorsGramsPerKm[baselineMode] ?? 192;
-  const chosenCo2 = co2FactorsGramsPerKm[chosenMode] ?? 0;
+): TransportDifferentialResult {
+  const baselineCo2 = TRANSPORT_CO2_GRAMS_PER_KM[baselineMode] ?? 192.0;
+  const chosenCo2 = TRANSPORT_CO2_GRAMS_PER_KM[chosenMode] ?? 0.0;
   const netSavedCo2Kg = Math.max(0, ((baselineCo2 - chosenCo2) * distanceKm) / 1000);
 
-  const baselineNox = noxFactorsMgPerKm[baselineMode] ?? 450;
-  const chosenNox = noxFactorsMgPerKm[chosenMode] ?? 0;
+  const baselineNox = TRANSPORT_NOX_MG_PER_KM[baselineMode] ?? 450.0;
+  const chosenNox = TRANSPORT_NOX_MG_PER_KM[chosenMode] ?? 0.0;
   const netSavedNoxGrams = Math.max(0, ((baselineNox - chosenNox) * distanceKm) / 1000);
 
   return {
@@ -271,8 +295,11 @@ export function calculateTransportEmissionsDifferential(
 
 /**
  * Diurnal Boundary Layer & Thermal Inversion Predictor
- * Identifies high-risk trapping hours (early morning 06:00-09:30 & night 20:00-24:00)
- * vs solar thermal mixing window (12:30-15:30).
+ * Models diurnal solar mixing dynamics and boundary layer entrapment.
+ *
+ * @param basePm25 Ambient base PM2.5 in ug/m3
+ * @param _temperatureC Temperature in Celsius
+ * @returns 18-hour diurnal forecast with inversion and ventilation indicators
  */
 export function generateDiurnalHourlyForecast(
   basePm25: number,
@@ -326,4 +353,3 @@ export function generateDiurnalHourlyForecast(
     };
   });
 }
-

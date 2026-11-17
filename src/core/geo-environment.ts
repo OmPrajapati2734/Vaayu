@@ -1,5 +1,7 @@
 import { AirQualitySnapshot, InversionSeverity } from '@/types';
 import { calculateAQIFromPM25, generateDiurnalHourlyForecast } from '@/core/math-engines';
+import { OpenMeteoResponseSchema } from '@/core/security';
+import { INVERSION_PARAMETERS } from '@/core/constants';
 
 export interface LocationHotspot {
   id: string;
@@ -346,10 +348,13 @@ export async function fetchLiveLocationEnvironmentalData(
       return fallbackSnapshot;
     }
 
-    const aqiJson = await aqiResponse.json();
-    const current = aqiJson.current;
-    if (!current) return fallbackSnapshot;
+    const rawJson = await aqiResponse.json();
+    const parsedResult = OpenMeteoResponseSchema.safeParse(rawJson);
+    if (!parsedResult.success || !parsedResult.data.current) {
+      return fallbackSnapshot;
+    }
 
+    const current = parsedResult.data.current;
     const pm25 = Math.round(current.pm2_5 ?? fallbackSnapshot.pm25);
     const pm10 = Math.round(current.pm10 ?? fallbackSnapshot.pm10);
     const usAqi = Math.round(current.us_aqi ?? calculateAQIFromPM25(pm25).aqi);
@@ -360,14 +365,21 @@ export async function fetchLiveLocationEnvironmentalData(
 
     // Extract boundary layer height from hourly forecast if available
     let mixingHeight = fallbackSnapshot.inversionStatus.mixingHeightMeters;
-    if (aqiJson.hourly?.boundary_layer_height?.length > 0) {
-      mixingHeight = Math.round(aqiJson.hourly.boundary_layer_height[0]);
+    const boundaryLayerArray = parsedResult.data.hourly?.boundary_layer_height;
+    if (boundaryLayerArray && boundaryLayerArray.length > 0 && typeof boundaryLayerArray[0] === 'number') {
+      mixingHeight = Math.round(boundaryLayerArray[0]);
     }
 
     let severity: InversionSeverity = 'None';
-    if (mixingHeight < 250 || pm25 > 150) {
+    if (
+      mixingHeight < INVERSION_PARAMETERS.CRITICAL_MIXING_HEIGHT_METERS ||
+      pm25 > INVERSION_PARAMETERS.SEVERE_PM25_THRESHOLD
+    ) {
       severity = 'Severe';
-    } else if (mixingHeight < 400 || pm25 > 75) {
+    } else if (
+      mixingHeight < INVERSION_PARAMETERS.MODERATE_MIXING_HEIGHT_METERS ||
+      pm25 > INVERSION_PARAMETERS.MODERATE_PM25_THRESHOLD
+    ) {
       severity = 'Moderate';
     }
 
@@ -393,8 +405,8 @@ export async function fetchLiveLocationEnvironmentalData(
           }
         }
       }
-    } catch {
-      // Fallback to approximated coordinate name
+    } catch (_geoError: unknown) {
+      // Fallback to approximated coordinate name gracefully
     }
 
     const { category } = calculateAQIFromPM25(pm25);
@@ -420,7 +432,7 @@ export async function fetchLiveLocationEnvironmentalData(
       hourlyForecast: hourly,
       coordinates: { lat, lng },
     };
-  } catch {
+  } catch (_err: unknown) {
     return fallbackSnapshot;
   }
 }

@@ -29,9 +29,7 @@ describe('Security - Input Sanitization & Anti-XSS Engine', () => {
 
   it('safely handles empty or non-string inputs', () => {
     expect(sanitizeInput('')).toBe('');
-    // @ts-expect-error testing runtime robustness
     expect(sanitizeInput(null)).toBe('');
-    // @ts-expect-error testing runtime robustness
     expect(sanitizeInput(undefined)).toBe('');
   });
 });
