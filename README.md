@@ -4,7 +4,7 @@
 
 ---
 
-## 🏆 Evaluation Rubrics & Compliance Matrix (100/100 Target)
+## 🏆 Evaluation Rubrics & Compliance Matrix
 
 | Evaluation Parameter | Impact | Architectural Implementation | Verification |
 | :--- | :--- | :--- | :--- |
@@ -12,7 +12,7 @@
 | **2. Code Quality** | **High** | • Strict TypeScript domain-driven design, zero `any` types.<br>• SOLID architecture: pure domain logic decoupled from UI and GenAI orchestrator.<br>• Clean component composition, custom typed hooks, and modular directory hierarchy. | Verified via `tsc && vite build` (zero errors) |
 | **3. Security** | **High** | • **OWASP Top 10 & LLM Security**: Prompt injection guards, delimiter fencing, and schema validation with Zod.<br>• Zero exposure of raw PII or precise home addresses (uses coarse urban geohash coordinates).<br>• Defense-in-depth API architecture with sanitization and rate-limiting safeguards. | Validated in `src/tests/genai-agent.test.ts` |
 | **4. Efficiency** | **Medium** | • **Smart Caching & Fast TTFT**: Zero redundant API fetches through local state caching and deterministic mathematical models.<br>• Optimized production bundle: **124 kB gzipped JS**, tree-shaken Lucide icons, instant sub-second render. | Built in 44s; clean gzip output |
-| **5. Testing** | **Low** | • **21/21 passing Vitest automated tests** across 3 test suites.<br>• 100% coverage over EPA AQI piecewise linear interpolation, geospatial distance decay, minute ventilation dosimetry, Corsi-Rosenthal CADR formulas, and GenAI tool calling workflows. | `npm test` passing 100% |
+| **5. Testing** | **Low** | • **34/34 passing Vitest automated tests** across 5 test suites.<br>• Comprehensive coverage over EPA AQI piecewise linear interpolation, geospatial distance decay, minute ventilation dosimetry, Corsi-Rosenthal CADR formulas, OWASP Top 10 input sanitization, prompt fencing guards, rate limiting, and community corridor calculations. | `npm test` passing 100% |
 | **6. Accessibility (a11y)** | **Low** | • **WCAG 2.1 AA Compliant**: Colorblind-safe AQI palettes with dual visual indicators (does not rely on green/red alone).<br>• Full keyboard tab navigation, visible `:focus-visible` rings, ARIA live regions (`role="alert"` for smog emergencies).<br>• High-Contrast toggle and bilingual support (English & Hindi). | Verified in `src/components/` & `src/index.css` |
 
 ---
@@ -61,7 +61,7 @@ The platform features an autonomous multi-tool agent that dispatches domain-spec
 # 1. Install dependencies
 npm install
 
-# 2. Run unit and integration tests (15/15 passing)
+# 2. Run unit and integration tests (34/34 passing)
 npm test
 
 # 3. Build for production
@@ -83,18 +83,25 @@ UrbanAirAI/
 │   ├── components/              # Accessible React 18+ UI Components
 │   │   ├── Navbar.tsx           # Navigation, language & a11y toggles
 │   │   ├── AQIGauge.tsx         # Colorblind-safe gauge & diurnal timeline
+│   │   ├── LocationMapSelector.tsx # Leaflet & OpenStreetMap interactive location picker
 │   │   ├── IAQHackStudio.tsx    # Interactive Corsi-Rosenthal CADR simulator
+│   │   ├── CommunityHub.tsx     # Clean air corridors, carpool clusters & smoke watch
 │   │   ├── RoutinePlanner.tsx   # Low-emission daily schedule checklist
 │   │   ├── ImpactTracker.tsx    # Quantified personal & community receipts
 │   │   ├── ChatAssistant.tsx    # Multi-tool GenAI copilot with citations
 │   │   └── FamilyProfileModal.tsx # Accessible household intake dialog
 │   ├── core/
-│   │   └── math-engines.ts      # Scientifically validated physics models
+│   │   ├── math-engines.ts      # Scientifically validated physics models
+│   │   ├── geo-environment.ts  # Geospatial atmospheric inversion & live weather APIs
+│   │   └── security.ts          # OWASP sanitization, prompt fencing & rate limiting
 │   ├── genai/
 │   │   ├── knowledge-base.ts    # EPA, WHO & UC Davis research datasets
 │   │   └── orchestrator.ts      # Multi-tool agent & prompt-fencing core
 │   ├── tests/
 │   │   ├── math-engines.test.ts # Core formulas unit tests
+│   │   ├── geo-environment.test.ts # Live weather & fallback physics tests
+│   │   ├── security.test.ts     # Input sanitization & prompt guard tests
+│   │   ├── community.test.ts    # Clean air corridors & carpool tests
 │   │   └── genai-agent.test.ts  # Autonomous tool calling tests
 │   ├── types/
 │   │   └── index.ts             # Zod schemas & TypeScript types
